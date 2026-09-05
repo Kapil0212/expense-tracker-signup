@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ExpenseForm from './ExpenseForm';
 import ExpenseList from './ExpenseList';
+
+import { auth } from '../firebase';
+import {
+  addExpense,
+  getExpenses,
+} from '../services/expenseApi';
 
 function ProfileStatus({
   profileComplete,
@@ -15,12 +21,89 @@ function ProfileStatus({
   handleLogout,
 }) {
   const [expenses, setExpenses] = useState([]);
+  const [loadingExpenses, setLoadingExpenses] = useState(true);
+  const [addingExpense, setAddingExpense] = useState(false);
+  const [expenseError, setExpenseError] = useState('');
 
-  const addExpense = (expense) => {
-    setExpenses((currentExpenses) => [
-      ...currentExpenses,
-      expense,
-    ]);
+  useEffect(() => {
+    const loadExpenses = async () => {
+      try {
+        const user = auth.currentUser;
+
+        if (!user) {
+          return;
+        }
+
+        const idToken = await user.getIdToken(true);
+
+        const userExpenses = await getExpenses(
+          idToken,
+          user.uid
+        );
+
+        setExpenses(userExpenses);
+      } catch (error) {
+        console.error(
+          'Error loading expenses:',
+          error
+        );
+
+        setExpenseError(
+          error.message || 'Failed to load expenses.'
+        );
+      } finally {
+        setLoadingExpenses(false);
+      }
+    };
+
+    loadExpenses();
+  }, []);
+
+  const handleAddExpense = async (expense) => {
+    setAddingExpense(true);
+    setExpenseError('');
+
+    try {
+      const user = auth.currentUser;
+
+      if (!user) {
+        alert('Please login again.');
+        return false;
+      }
+
+      const idToken = await user.getIdToken(true);
+
+      const savedExpense = await addExpense(
+        idToken,
+        user.uid,
+        expense
+      );
+
+      // Only update UI after successful Firebase response
+      setExpenses((currentExpenses) => [
+        ...currentExpenses,
+        savedExpense,
+      ]);
+
+      return true;
+    } catch (error) {
+      console.error(
+        'Error adding expense:',
+        error
+      );
+
+      setExpenseError(
+        error.message || 'Failed to add expense.'
+      );
+
+      alert(
+        error.message || 'Failed to add expense.'
+      );
+
+      return false;
+    } finally {
+      setAddingExpense(false);
+    }
   };
 
   return (
@@ -53,7 +136,9 @@ function ProfileStatus({
           </div>
         ) : (
           <div>
-            <p>✓ Profile completed successfully.</p>
+            <p>
+              ✓ Profile completed successfully.
+            </p>
 
             {photoUrl && (
               <img
@@ -105,16 +190,31 @@ function ProfileStatus({
               </button>
             </>
           ) : (
-            <p>✓ Email verified successfully</p>
+            <p>
+              ✓ Email verified successfully
+            </p>
           )}
         </div>
 
         {message && <p>{message}</p>}
 
         {/* DAILY EXPENSES */}
-        <ExpenseForm onAddExpense={addExpense} />
 
-        <ExpenseList expenses={expenses} />
+        <ExpenseForm
+          onAddExpense={handleAddExpense}
+          loading={addingExpense}
+        />
+
+        {expenseError && (
+          <p className="expense-error">
+            {expenseError}
+          </p>
+        )}
+
+        <ExpenseList
+          expenses={expenses}
+          loading={loadingExpenses}
+        />
       </div>
     </div>
   );

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 
-function ExpenseForm({ onAddExpense }) {
+function ExpenseForm({ onAddExpense, loading }) {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!amount || !description.trim() || !category) {
@@ -13,18 +13,19 @@ function ExpenseForm({ onAddExpense }) {
       return;
     }
 
-    const newExpense = {
-      id: Date.now(),
+    const expense = {
       amount: Number(amount),
       description: description.trim(),
       category,
     };
 
-    onAddExpense(newExpense);
+    const success = await onAddExpense(expense);
 
-    setAmount('');
-    setDescription('');
-    setCategory('');
+    if (success) {
+      setAmount('');
+      setDescription('');
+      setCategory('');
+    }
   };
 
   return (
@@ -46,6 +47,7 @@ function ExpenseForm({ onAddExpense }) {
           placeholder="Money Spent"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
+          disabled={loading}
           required
         />
 
@@ -54,12 +56,14 @@ function ExpenseForm({ onAddExpense }) {
           placeholder="Description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          disabled={loading}
           required
         />
 
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
+          disabled={loading}
           required
         >
           <option value="">Select Category</option>
@@ -72,8 +76,11 @@ function ExpenseForm({ onAddExpense }) {
           <option value="Other">Other</option>
         </select>
 
-        <button type="submit">
-          Add Expense
+        <button
+          type="submit"
+          disabled={loading}
+        >
+          {loading ? 'Saving...' : 'Add Expense'}
         </button>
       </form>
     </section>

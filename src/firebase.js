@@ -8,7 +8,8 @@ const firebaseConfig = {
   storageBucket: "expense-tracker-signup-2636e.firebasestorage.app",
   messagingSenderId: "556684472867",
   appId: "1:556684472867:web:765cc4ea563b302923b796",
-  measurementId: "G-49Q4JC777E"
+  measurementId: "G-49Q4JC777E",
+  databaseURL: "https://expense-tracker-signup-2636e-default-rtdb.firebaseio.com"
 };
 
 const app = initializeApp(firebaseConfig);

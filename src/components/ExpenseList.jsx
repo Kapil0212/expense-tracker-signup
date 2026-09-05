@@ -1,11 +1,15 @@
 import React from 'react';
 
-function ExpenseList({ expenses }) {
+function ExpenseList({ expenses, loading }) {
   return (
     <section className="expense-list">
       <h3>Added Expenses</h3>
 
-      {expenses.length === 0 ? (
+      {loading ? (
+        <p className="no-expenses">
+          Loading expenses...
+        </p>
+      ) : expenses.length === 0 ? (
         <p className="no-expenses">
           No expenses added yet.
         </p>
@@ -24,7 +28,7 @@ function ExpenseList({ expenses }) {
             </div>
 
             <div className="expense-amount">
-              ₹{expense.amount.toFixed(2)}
+              ₹{Number(expense.amount).toFixed(2)}
             </div>
           </div>
         ))
