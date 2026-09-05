@@ -1,0 +1,25 @@
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; min-height: 100%; width: 100%; }
+body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #111; }
+.page { min-height: 100vh; position: relative; overflow: hidden; background: #fff; }
+.navbar { height: 68px; display: flex; align-items: center; padding: 0 18px; position: relative; z-index: 3; background: #fff; }
+.brand { display: flex; align-items: center; gap: 7px; font-size: 19px; color: #1698e8; font-weight: 400; }
+.brand-mark { color: #15985f; font-size: 29px; line-height: 1; transform: rotate(45deg); display: inline-block; }
+nav { display: flex; gap: 27px; margin-left: 22px; }
+nav a { color: #333; text-decoration: none; font-size: 12px; }
+.blue-shape { position: absolute; right: -2px; top: 68px; width: 45%; height: 43%; background: #0868f6; border-bottom-left-radius: 58% 40%; clip-path: path('M 0 0 C 130 105 260 10 280 150 C 295 260 390 315 650 345 L 650 0 Z'); }
+.content { min-height: calc(100vh - 68px); position: relative; z-index: 2; display: flex; justify-content: center; align-items: flex-start; padding-top: 173px; }
+.signup-wrap { width: 195px; }
+.card { width: 195px; min-height: 222px; border: 1px solid #ddd; padding: 27px 13px 20px; background: rgba(255,255,255,.98); }
+h1 { font-size: 16px; font-weight: 400; text-align: center; margin: 0 0 20px; }
+form { display: flex; flex-direction: column; }
+input { width: 100%; height: 27px; border: 1px solid #e4e4e4; border-radius: 3px; padding: 0 7px; font-size: 9px; margin-bottom: 7px; outline: none; background: #fff; }
+input:focus { border-color: #b7d6fa; box-shadow: 0 0 0 1px #e7f2ff; }
+input::placeholder { color: #aaa; }
+button[type="submit"] { border: 0; height: 26px; border-radius: 16px; background: #0b9ee9; color: #fff; font-size: 10px; margin-top: 11px; cursor: pointer; }
+button[type="submit"]:disabled { opacity: .65; cursor: wait; }
+.login-box { width: 195px; height: 32px; margin-top: 11px; border: 1px solid #9db5aa; border-radius: 2px; background: #eefaf5; color: #333; font-size: 9px; cursor: pointer; }
+.message { font-size: 8px; line-height: 1.25; margin: 1px 0 0; }
+.error { color: #d93025; }
+.success { color: #188038; }
+@media (max-width: 700px) { .blue-shape { width: 65%; } .content { padding-top: 130px; } }
