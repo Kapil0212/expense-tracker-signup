@@ -21,138 +21,117 @@ function App() {
   const [photoUrl, setPhotoUrl] = useState('');
 
   const [profileComplete, setProfileComplete] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [verificationLoading, setVerificationLoading] = useState(false);
+
+  const clearMessages = () => {
+    setError('');
+    setSuccess('');
+  };
 
   /*
    * GET USER DETAILS FROM FIREBASE
-   *
-   * Firebase REST API:
-   * POST https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=API_KEY
-   *
-   * idToken is sent in the request body.
    */
   const getUserDetails = async (idToken) => {
-    try {
-      const apiKey = auth.app.options.apiKey;
+    const apiKey = auth.app.options.apiKey;
 
-      const response = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            idToken: idToken,
-          }),
-        }
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          idToken,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error?.message || 'Unable to fetch profile'
+      );
+    }
+
+    if (data.users && data.users.length > 0) {
+      const user = data.users[0];
+
+      const fetchedFullName = user.displayName || '';
+      const fetchedPhotoUrl = user.photoUrl || '';
+
+      setEmail(user.email || '');
+      setFullName(fetchedFullName);
+      setPhotoUrl(fetchedPhotoUrl);
+
+      setProfileComplete(
+        Boolean(fetchedFullName && fetchedPhotoUrl)
       );
 
-      const data = await response.json();
+      setEmailVerified(
+        Boolean(user.emailVerified)
+      );
 
-      if (!response.ok) {
-        throw new Error(
-          data?.error?.message || 'Unable to fetch profile'
-        );
-      }
-
-      if (data.users && data.users.length > 0) {
-        const user = data.users[0];
-
-        const fetchedFullName = user.displayName || '';
-        const fetchedPhotoUrl = user.photoUrl || '';
-
-        setEmail(user.email || '');
-
-        setFullName(fetchedFullName);
-        setPhotoUrl(fetchedPhotoUrl);
-
-        /*
-         * Profile is considered complete when
-         * both displayName and photoUrl exist.
-         */
-        setProfileComplete(
-          Boolean(fetchedFullName && fetchedPhotoUrl)
-        );
-
-        return user;
-      }
-
-      return null;
-    } catch (err) {
-      console.error('Get user details error:', err);
-      throw err;
+      return user;
     }
+
+    return null;
   };
 
   /*
    * CHECK AUTHENTICATION ON PAGE LOAD / REFRESH
    */
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setScreen('login');
-        return;
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (user) => {
+        if (!user) {
+          setScreen('login');
+          return;
+        }
+
+        setProfileLoading(true);
+
+        try {
+          const token = await user.getIdToken(true);
+
+          localStorage.setItem('token', token);
+
+          await getUserDetails(token);
+
+          setScreen('profile-status');
+        } catch (err) {
+          console.error(err);
+
+          setEmail(user.email || '');
+          setFullName(user.displayName || '');
+          setPhotoUrl(user.photoURL || '');
+          setEmailVerified(Boolean(user.emailVerified));
+
+          setProfileComplete(
+            Boolean(
+              user.displayName &&
+              user.photoURL
+            )
+          );
+
+          setScreen('profile-status');
+        } finally {
+          setProfileLoading(false);
+        }
       }
-
-      setProfileLoading(true);
-
-      try {
-        /*
-         * Get fresh ID token.
-         */
-        const token = await user.getIdToken(true);
-
-        /*
-         * Store token.
-         */
-        localStorage.setItem('token', token);
-
-        /*
-         * IMPORTANT:
-         * Fetch profile data from Firebase using
-         * accounts:lookup API.
-         */
-        await getUserDetails(token);
-
-        /*
-         * After getting the data from Firebase,
-         * show profile status screen.
-         */
-        setScreen('profile-status');
-      } catch (err) {
-        console.error(err);
-
-        /*
-         * If API fails, still keep the user logged in.
-         * Firebase user data is used as fallback.
-         */
-        setEmail(user.email || '');
-        setFullName(user.displayName || '');
-        setPhotoUrl(user.photoURL || '');
-
-        setProfileComplete(
-          Boolean(user.displayName && user.photoURL)
-        );
-
-        setScreen('profile-status');
-      } finally {
-        setProfileLoading(false);
-      }
-    });
+    );
 
     return unsubscribe;
   }, []);
-
-  const clearMessages = () => {
-    setError('');
-    setSuccess('');
-  };
 
   /*
    * SIGNUP
@@ -161,7 +140,11 @@ function App() {
     e.preventDefault();
     clearMessages();
 
-    if (!email.trim() || !password || !confirmPassword) {
+    if (
+      !email.trim() ||
+      !password ||
+      !confirmPassword
+    ) {
       setError('All fields are required.');
       return;
     }
@@ -248,25 +231,14 @@ function App() {
           password
         );
 
-      /*
-       * Get fresh token.
-       */
       const token =
         await credential.user.getIdToken(true);
 
-      /*
-       * Store token.
-       */
       localStorage.setItem('token', token);
 
-      /*
-       * IMPORTANT:
-       * Get saved profile details from Firebase.
-       */
       await getUserDetails(token);
 
       setPassword('');
-
       setScreen('profile-status');
     } catch (err) {
       console.error(err);
@@ -305,10 +277,203 @@ function App() {
   };
 
   /*
-   * OPEN EDIT PROFILE PAGE
+   * SEND EMAIL VERIFICATION
    *
-   * Before showing the form, fetch the latest
-   * data from Firebase again.
+   * Firebase REST API:
+   * accounts:sendOobCode
+   *
+   * requestType:
+   * VERIFY_EMAIL
+   */
+  const handleVerifyEmail = async () => {
+    clearMessages();
+
+    if (!auth.currentUser) {
+      alert('Please login again.');
+      setScreen('login');
+      return;
+    }
+
+    setVerificationLoading(true);
+
+    try {
+      /*
+       * Get a fresh ID token.
+       */
+      const idToken =
+        await auth.currentUser.getIdToken(true);
+
+      const apiKey = auth.app.options.apiKey;
+
+      /*
+       * Send verification email through
+       * Firebase REST API.
+       */
+      const response = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json',
+          },
+
+          body: JSON.stringify({
+            requestType: 'VERIFY_EMAIL',
+            idToken,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const firebaseError =
+          data?.error?.message || '';
+
+        switch (firebaseError) {
+          case 'EMAIL_EXISTS':
+            setError(
+              'This email address is already associated with another account.'
+            );
+            break;
+
+          case 'INVALID_ID_TOKEN':
+            setError(
+              'Your login session has expired. Please login again.'
+            );
+            break;
+
+          case 'USER_NOT_FOUND':
+            setError(
+              'User account was not found. Please login again.'
+            );
+            break;
+
+          case 'TOKEN_EXPIRED':
+            setError(
+              'Your session has expired. Please login again.'
+            );
+            break;
+
+          case 'INVALID_EMAIL':
+            setError(
+              'The email address is invalid.'
+            );
+            break;
+
+          case 'OPERATION_NOT_ALLOWED':
+            setError(
+              'Email verification is not enabled for this Firebase project.'
+            );
+            break;
+
+          case 'TOO_MANY_ATTEMPTS_TRY_LATER':
+            setError(
+              'Too many attempts. Please try again later.'
+            );
+            break;
+
+          default:
+            setError(
+              'Unable to send verification email. Please try again.'
+            );
+        }
+
+        return;
+      }
+
+      /*
+       * Firebase successfully sent the email.
+       */
+      setSuccess(
+        'Check your email, you might have received a verification link. Click on it to verify.'
+      );
+
+      alert(
+        'Verification email sent! Check your inbox and click the verification link.'
+      );
+    } catch (err) {
+      console.error(
+        'Email verification error:',
+        err
+      );
+
+      setError(
+        'Unable to send verification email. Please check your internet connection and try again.'
+      );
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  /*
+   * CHECK VERIFICATION STATUS
+   *
+   * Useful after the user clicks the verification
+   * link in their email.
+   */
+  const checkEmailVerification = async () => {
+    clearMessages();
+
+    if (!auth.currentUser) {
+      alert('Please login again.');
+      setScreen('login');
+      return;
+    }
+
+    setVerificationLoading(true);
+
+    try {
+      /*
+       * Reload Firebase user information.
+       */
+      await auth.currentUser.reload();
+
+      const user = auth.currentUser;
+
+      /*
+       * Get a fresh token after reload.
+       */
+      const token =
+        await user.getIdToken(true);
+
+      localStorage.setItem('token', token);
+
+      /*
+       * Fetch latest Firebase account information.
+       */
+      const latestUser =
+        await getUserDetails(token);
+
+      const verified =
+        latestUser?.emailVerified ||
+        user.emailVerified;
+
+      setEmailVerified(Boolean(verified));
+
+      if (verified) {
+        setSuccess(
+          'Your email has been verified successfully.'
+        );
+      } else {
+        setError(
+          'Your email is not verified yet. Please click the verification link sent to your email.'
+        );
+      }
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        'Unable to check email verification status. Please try again.'
+      );
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  /*
+   * OPEN PROFILE
    */
   const openProfile = async () => {
     clearMessages();
@@ -327,9 +492,6 @@ function App() {
 
       localStorage.setItem('token', token);
 
-      /*
-       * GET latest saved data from Firebase.
-       */
       await getUserDetails(token);
 
       setScreen('update-profile');
@@ -357,7 +519,10 @@ function App() {
       return;
     }
 
-    if (!fullName.trim() || !photoUrl.trim()) {
+    if (
+      !fullName.trim() ||
+      !photoUrl.trim()
+    ) {
       setError(
         'Full Name and Profile Photo URL are required.'
       );
@@ -369,15 +534,9 @@ function App() {
     try {
       const apiKey = auth.app.options.apiKey;
 
-      /*
-       * Get current Firebase ID token.
-       */
       const token =
         await auth.currentUser.getIdToken(true);
 
-      /*
-       * Firebase accounts:update REST API.
-       */
       const response = await fetch(
         `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
         {
@@ -389,11 +548,8 @@ function App() {
 
           body: JSON.stringify({
             idToken: token,
-
             displayName: fullName.trim(),
-
             photoUrl: photoUrl.trim(),
-
             returnSecureToken: true,
           }),
         }
@@ -404,14 +560,10 @@ function App() {
       if (!response.ok) {
         throw new Error(
           data?.error?.message ||
-            'PROFILE_UPDATE_FAILED'
+          'PROFILE_UPDATE_FAILED'
         );
       }
 
-      /*
-       * Firebase returns a new token after update.
-       * Save that token.
-       */
       if (data.idToken) {
         localStorage.setItem(
           'token',
@@ -419,12 +571,6 @@ function App() {
         );
       }
 
-      /*
-       * Fetch the profile again from Firebase.
-       *
-       * This makes sure the data displayed by the
-       * application is actually coming from Firebase.
-       */
       const latestToken =
         data.idToken ||
         await auth.currentUser.getIdToken(true);
@@ -468,6 +614,7 @@ function App() {
     setPhotoUrl('');
 
     setProfileComplete(false);
+    setEmailVerified(false);
 
     clearMessages();
   };
@@ -501,8 +648,8 @@ function App() {
               <span>
                 Your Profile is{' '}
                 <strong>64%</strong> completed.
-                A complete Profile has higher chances
-                of landing a job.
+                A complete Profile has higher
+                chances of landing a job.
               </span>
 
               <button
@@ -538,6 +685,51 @@ function App() {
             <p className="message success">
               {success}
             </p>
+          )}
+
+          {error && (
+            <p className="message error">
+              {error}
+            </p>
+          )}
+
+          {!emailVerified && (
+            <div className="verification-box">
+
+              <h3>
+                Verify your Email ID
+              </h3>
+
+              <p>
+                Please verify your email address
+                to keep your account secure.
+              </p>
+
+              <button
+                className="verify-button"
+                onClick={handleVerifyEmail}
+                disabled={verificationLoading}
+              >
+                {verificationLoading
+                  ? 'Sending...'
+                  : 'Verify Email ID'}
+              </button>
+
+              <button
+                className="check-button"
+                onClick={checkEmailVerification}
+                disabled={verificationLoading}
+              >
+                I have verified my email
+              </button>
+
+            </div>
+          )}
+
+          {emailVerified && (
+            <div className="verified-box">
+              ✓ Email verified successfully
+            </div>
           )}
 
           {profileComplete && photoUrl && (
@@ -670,7 +862,7 @@ function App() {
   }
 
   /*
-   * LOGIN / SIGNUP SCREEN
+   * LOGIN / SIGNUP
    */
   const isLogin = screen === 'login';
 
