@@ -559,3 +559,161 @@ select {
     padding: 20px 15px;
   }
 }
+
+/* EXPENSE EDIT / DELETE */
+
+.expense-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+}
+
+.expense-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.expense-actions button {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-btn {
+  background: #eef6ff;
+  color: #0b7fc0;
+  border: 1px solid #cfe9f8 !important;
+}
+
+.edit-btn:hover {
+  background: #dcefff;
+}
+
+.delete-btn {
+  background: #fff1f2;
+  color: #dc2626;
+  border: 1px solid #fecdd3 !important;
+}
+
+.delete-btn:hover {
+  background: #ffe4e6;
+}
+
+.expense-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* EDIT FORM */
+
+.expense-edit-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.expense-edit-form input,
+.expense-edit-form select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  margin-bottom: 10px;
+  border: 1px solid #d9dee7;
+  border-radius: 7px;
+  outline: none;
+  font-size: 14px;
+  background: #ffffff;
+}
+
+.expense-edit-form input:focus,
+.expense-edit-form select:focus {
+  border-color: #0b9ee9;
+  box-shadow: 0 0 0 3px rgba(11, 158, 233, 0.1);
+}
+
+.expense-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.expense-edit-actions button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 7px;
+  background: #0b9ee9;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.expense-edit-actions button:hover {
+  background: #0789ca;
+}
+
+.expense-edit-actions .cancel-btn {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.expense-edit-actions .cancel-btn:hover {
+  background: #e2e8f0;
+}
+
+.expense-error {
+  margin-top: 15px !important;
+  padding: 12px;
+  border-radius: 7px;
+  background: #fff1f2;
+  color: #dc2626 !important;
+  border: 1px solid #fecdd3;
+  font-size: 14px !important;
+}
+
+/* MOBILE */
+
+@media (max-width: 700px) {
+  .expense-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .expense-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .expense-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 450px) {
+  .expense-right {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .expense-actions {
+    width: 100%;
+  }
+
+  .expense-actions button {
+    flex: 1;
+  }
+
+  .expense-edit-actions {
+    flex-direction: column;
+  }
+
+  .expense-edit-actions button {
+    width: 100%;
+  }
+}

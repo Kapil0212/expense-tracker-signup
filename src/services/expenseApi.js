@@ -5,7 +5,7 @@ const getDatabaseUrl = () => {
 
   if (!databaseUrl) {
     throw new Error(
-      'Firebase Realtime Database URL is missing. Please add databaseURL to firebase.js.'
+      'Firebase Realtime Database URL is missing.'
     );
   }
 
@@ -42,7 +42,11 @@ export const getExpenses = async (idToken, userId) => {
   }));
 };
 
-export const addExpense = async (idToken, userId, expense) => {
+export const addExpense = async (
+  idToken,
+  userId,
+  expense
+) => {
   const databaseUrl = getDatabaseUrl();
 
   const response = await fetch(
@@ -74,4 +78,72 @@ export const addExpense = async (idToken, userId, expense) => {
     description: expense.description,
     category: expense.category,
   };
+};
+
+/* UPDATE EXPENSE */
+
+export const updateExpense = async (
+  idToken,
+  userId,
+  expenseId,
+  expense
+) => {
+  const databaseUrl = getDatabaseUrl();
+
+  const response = await fetch(
+    `${databaseUrl}/expenses/${userId}/${expenseId}.json?auth=${idToken}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: Number(expense.amount),
+        description: expense.description,
+        category: expense.category,
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error || 'Failed to update expense.'
+    );
+  }
+
+  return {
+    id: expenseId,
+    amount: Number(data.amount),
+    description: data.description,
+    category: data.category,
+  };
+};
+
+/* DELETE EXPENSE */
+
+export const deleteExpense = async (
+  idToken,
+  userId,
+  expenseId
+) => {
+  const databaseUrl = getDatabaseUrl();
+
+  const response = await fetch(
+    `${databaseUrl}/expenses/${userId}/${expenseId}.json?auth=${idToken}`,
+    {
+      method: 'DELETE',
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+
+    throw new Error(
+      errorData?.error || 'Failed to delete expense.'
+    );
+  }
+
+  return true;
 };
