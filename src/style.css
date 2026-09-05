@@ -82,6 +82,10 @@ input {
   box-shadow: 0 0 0 3px rgba(11, 158, 233, 0.1);
 }
 
+.auth-card input:disabled {
+  background: #f3f4f6;
+}
+
 .auth-card button,
 .content-card button {
   border: none;
@@ -101,6 +105,15 @@ input {
   background: #0789ca;
 }
 
+.auth-card button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.primary-btn {
+  width: 100%;
+}
+
 .secondary-btn {
   width: 100%;
   margin-top: 12px;
@@ -113,10 +126,97 @@ input {
   background: #dcefff !important;
 }
 
-.auth-card p {
-  text-align: center;
+.forgot-link {
+  display: block;
+  width: auto !important;
+  min-height: auto !important;
+  margin: 15px auto 0;
+  padding: 0 !important;
+  background: transparent !important;
+  color: #0b7fc0 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.forgot-link:hover {
+  background: transparent !important;
+  text-decoration: underline;
+}
+
+/* =========================
+   MESSAGES
+========================= */
+
+.message {
   font-size: 14px;
   line-height: 1.5;
+  text-align: center;
+}
+
+.error {
+  color: #d93025;
+}
+
+.success {
+  color: #188038;
+}
+
+/* =========================
+   FORGOT PASSWORD
+========================= */
+
+.forgot-card {
+  width: 420px;
+}
+
+.forgot-description {
+  margin: -8px 0 25px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.reset-success {
+  margin-top: 18px;
+  padding: 15px;
+  border-radius: 8px;
+  background: #f0fff5;
+  border: 1px solid #c9efd7;
+}
+
+.reset-success .message {
+  margin: 0;
+}
+
+.reset-help {
+  margin: 8px 0 0;
+  color: #555;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.loader-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.loader {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* =========================
@@ -248,7 +348,7 @@ input {
   flex-direction: column;
 }
 
-.content-card form button[type="submit"] {
+.content-card form button[type='submit'] {
   margin-top: 5px;
 }
 
@@ -295,7 +395,8 @@ input {
 }
 
 @media (max-width: 450px) {
-  .auth-card {
+  .auth-card,
+  .forgot-card {
     padding: 25px 20px;
   }
 

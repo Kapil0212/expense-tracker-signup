@@ -4,7 +4,6 @@ import {
   createUserWithEmailAndPassword,
   getIdToken,
   onAuthStateChanged,
-  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
@@ -23,6 +22,12 @@ function App() {
   const [profileComplete, setProfileComplete] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [message, setMessage] = useState('');
+
+  // Forgot Password states
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [forgotError, setForgotError] = useState('');
 
   const getUserDetails = async (idToken) => {
     try {
@@ -90,7 +95,13 @@ function App() {
       } else {
         localStorage.removeItem('idToken');
         localStorage.removeItem('token');
-        setScreen('login');
+
+        // Don't force screen change if user is on forgot password page
+        setScreen((currentScreen) =>
+          currentScreen === 'forgot-password'
+            ? 'forgot-password'
+            : 'login'
+        );
       }
     });
 
@@ -105,7 +116,7 @@ function App() {
       if (isLogin) {
         const userCredential = await signInWithEmailAndPassword(
           auth,
-          email,
+          email.trim(),
           password
         );
 
@@ -121,7 +132,7 @@ function App() {
         const userCredential =
           await createUserWithEmailAndPassword(
             auth,
-            email,
+            email.trim(),
             password
           );
 
@@ -145,19 +156,91 @@ function App() {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      alert('Please enter your email first.');
+  // =========================
+  // FORGOT PASSWORD
+  // =========================
+
+  const openForgotPassword = () => {
+    setForgotEmail('');
+    setForgotMessage('');
+    setForgotError('');
+    setForgotLoading(false);
+    setScreen('forgot-password');
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+
+    setForgotMessage('');
+    setForgotError('');
+
+    const trimmedEmail = forgotEmail.trim();
+
+    if (!trimmedEmail) {
+      setForgotError('Please enter your email address.');
       return;
     }
 
+    setForgotLoading(true);
+
     try {
-      await sendPasswordResetEmail(auth, email);
-      alert('Password reset email sent. Check your inbox.');
+      const apiKey = auth.app.options.apiKey;
+
+      const response = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requestType: 'PASSWORD_RESET',
+            email: trimmedEmail,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorCode = data?.error?.message;
+
+        const errorMessages = {
+          EMAIL_NOT_FOUND:
+            'No account exists with this email address.',
+          INVALID_EMAIL:
+            'Please enter a valid email address.',
+          USER_NOT_FOUND:
+            'No account exists with this email address.',
+          OPERATION_NOT_ALLOWED:
+            'Password reset is not enabled for this project.',
+          TOO_MANY_ATTEMPTS_TRY_LATER:
+            'Too many attempts. Please try again later.',
+        };
+
+        throw new Error(
+          errorMessages[errorCode] ||
+            errorCode ||
+            'Unable to send password reset email.'
+        );
+      }
+
+      setForgotMessage(
+        `Password reset link has been sent to ${data.email || trimmedEmail}. Please check your inbox.`
+      );
     } catch (error) {
-      alert(error.message || 'Failed to send password reset email.');
+      console.error('Forgot password error:', error);
+      setForgotError(
+        error.message || 'Unable to send password reset email.'
+      );
+    } finally {
+      setForgotLoading(false);
     }
   };
+
+  // =========================
+  // EDIT PROFILE
+  // =========================
 
   const openProfile = async () => {
     try {
@@ -236,6 +319,10 @@ function App() {
     }
   };
 
+  // =========================
+  // EMAIL VERIFICATION
+  // =========================
+
   const handleVerifyEmail = async () => {
     try {
       const user = auth.currentUser;
@@ -289,7 +376,7 @@ function App() {
       }
 
       setMessage(
-        'Verification email sent! Check your inbox and click the verification link.'
+        `Verification email sent to ${data.email || email}.`
       );
 
       alert(
@@ -334,17 +421,17 @@ function App() {
     }
   };
 
-  // LOGOUT USER
+  // =========================
+  // LOGOUT
+  // =========================
+
   const handleLogout = async () => {
     try {
-      // Sign out from Firebase
       await signOut(auth);
 
-      // Clear ID token from local storage
       localStorage.removeItem('idToken');
       localStorage.removeItem('token');
 
-      // Reset login screen
       setEmail('');
       setPassword('');
       setFullName('');
@@ -352,9 +439,8 @@ function App() {
       setProfileComplete(false);
       setEmailVerified(false);
       setMessage('');
-      setIsLogin(true);
 
-      // Redirect to login page
+      setIsLogin(true);
       setScreen('login');
     } catch (error) {
       console.error('Logout error:', error);
@@ -362,7 +448,89 @@ function App() {
     }
   };
 
-  // LOGIN SCREEN
+  // =========================
+  // FORGOT PASSWORD SCREEN
+  // =========================
+
+  if (screen === 'forgot-password') {
+    return (
+      <div className="auth-container">
+        <div className="auth-card forgot-card">
+          <h1>Expense Tracker</h1>
+
+          <h2>Forgot Password?</h2>
+
+          <p className="forgot-description">
+            Enter your registered email address and we will
+            send you a link to reset your password.
+          </p>
+
+          <form onSubmit={handleForgotPassword}>
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              disabled={forgotLoading}
+              required
+            />
+
+            <button
+              type="submit"
+              className="primary-btn"
+              disabled={forgotLoading}
+            >
+              {forgotLoading ? (
+                <span className="loader-container">
+                  <span className="loader"></span>
+                  Sending...
+                </span>
+              ) : (
+                'Send Reset Link'
+              )}
+            </button>
+          </form>
+
+          {forgotError && (
+            <p className="message error">
+              {forgotError}
+            </p>
+          )}
+
+          {forgotMessage && (
+            <div className="reset-success">
+              <p className="message success">
+                {forgotMessage}
+              </p>
+
+              <p className="reset-help">
+                Open the email and click the password reset
+                link to create a new password.
+              </p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => {
+              setForgotMessage('');
+              setForgotError('');
+              setScreen('login');
+            }}
+            disabled={forgotLoading}
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================
+  // LOGIN / SIGNUP SCREEN
+  // =========================
+
   if (screen === 'login') {
     return (
       <div className="auth-container">
@@ -406,8 +574,8 @@ function App() {
           {isLogin && (
             <button
               type="button"
-              className="secondary-btn"
-              onClick={handleForgotPassword}
+              className="forgot-link"
+              onClick={openForgotPassword}
             >
               Forgot Password?
             </button>
@@ -432,7 +600,10 @@ function App() {
     );
   }
 
+  // =========================
   // PROFILE STATUS SCREEN
+  // =========================
+
   if (screen === 'profile-status') {
     return (
       <div className="app-container">
@@ -526,7 +697,10 @@ function App() {
     );
   }
 
+  // =========================
   // UPDATE PROFILE SCREEN
+  // =========================
+
   if (screen === 'update-profile') {
     return (
       <div className="app-container">
@@ -581,8 +755,6 @@ function App() {
 
   return null;
 }
-
-export default App;
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
