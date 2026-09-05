@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   createUserWithEmailAndPassword,
+  getIdToken,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
@@ -12,314 +13,29 @@ import './style.css';
 
 function App() {
   const [screen, setScreen] = useState('login');
+  const [isLogin, setIsLogin] = useState(true);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
   const [fullName, setFullName] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
 
   const [profileComplete, setProfileComplete] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  const [loading, setLoading] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [verificationLoading, setVerificationLoading] = useState(false);
-
-  const clearMessages = () => {
-    setError('');
-    setSuccess('');
-  };
-
-  /*
-   * GET USER DETAILS FROM FIREBASE
-   */
   const getUserDetails = async (idToken) => {
-    const apiKey = auth.app.options.apiKey;
-
-    const response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          idToken,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data?.error?.message || 'Unable to fetch profile'
-      );
-    }
-
-    if (data.users && data.users.length > 0) {
-      const user = data.users[0];
-
-      const fetchedFullName = user.displayName || '';
-      const fetchedPhotoUrl = user.photoUrl || '';
-
-      setEmail(user.email || '');
-      setFullName(fetchedFullName);
-      setPhotoUrl(fetchedPhotoUrl);
-
-      setProfileComplete(
-        Boolean(fetchedFullName && fetchedPhotoUrl)
-      );
-
-      setEmailVerified(
-        Boolean(user.emailVerified)
-      );
-
-      return user;
-    }
-
-    return null;
-  };
-
-  /*
-   * CHECK AUTHENTICATION ON PAGE LOAD / REFRESH
-   */
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (user) => {
-        if (!user) {
-          setScreen('login');
-          return;
-        }
-
-        setProfileLoading(true);
-
-        try {
-          const token = await user.getIdToken(true);
-
-          localStorage.setItem('token', token);
-
-          await getUserDetails(token);
-
-          setScreen('profile-status');
-        } catch (err) {
-          console.error(err);
-
-          setEmail(user.email || '');
-          setFullName(user.displayName || '');
-          setPhotoUrl(user.photoURL || '');
-          setEmailVerified(Boolean(user.emailVerified));
-
-          setProfileComplete(
-            Boolean(
-              user.displayName &&
-              user.photoURL
-            )
-          );
-
-          setScreen('profile-status');
-        } finally {
-          setProfileLoading(false);
-        }
-      }
-    );
-
-    return unsubscribe;
-  }, []);
-
-  /*
-   * SIGNUP
-   */
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    clearMessages();
-
-    if (
-      !email.trim() ||
-      !password ||
-      !confirmPassword
-    ) {
-      setError('All fields are required.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    setLoading(true);
-
     try {
-      await createUserWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password
-      );
-
-      await signOut(auth);
-
-      setSuccess(
-        'Account created successfully! You can now login.'
-      );
-
-      setPassword('');
-      setConfirmPassword('');
-
-      setScreen('login');
-    } catch (err) {
-      switch (err.code) {
-        case 'auth/email-already-in-use':
-          setError(
-            'An account already exists with this email.'
-          );
-          break;
-
-        case 'auth/invalid-email':
-          setError(
-            'Please enter a valid email address.'
-          );
-          break;
-
-        case 'auth/weak-password':
-          setError(
-            'Password should be at least 6 characters.'
-          );
-          break;
-
-        case 'auth/network-request-failed':
-          setError(
-            'Network error. Please check your internet connection.'
-          );
-          break;
-
-        default:
-          setError(
-            'Something went wrong. Please try again.'
-          );
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /*
-   * LOGIN
-   */
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    clearMessages();
-
-    if (!email.trim() || !password) {
-      alert('Please enter email and password.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const credential =
-        await signInWithEmailAndPassword(
-          auth,
-          email.trim(),
-          password
-        );
-
-      const token =
-        await credential.user.getIdToken(true);
-
-      localStorage.setItem('token', token);
-
-      await getUserDetails(token);
-
-      setPassword('');
-      setScreen('profile-status');
-    } catch (err) {
-      console.error(err);
-
-      alert(
-        'Invalid email or password. Please try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /*
-   * FORGOT PASSWORD
-   */
-  const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      alert('Please enter your email first.');
-      return;
-    }
-
-    try {
-      await sendPasswordResetEmail(
-        auth,
-        email.trim()
-      );
-
-      alert(
-        'Password reset email sent. Please check your inbox.'
-      );
-    } catch (err) {
-      alert(
-        'Unable to send password reset email. Please check the email.'
-      );
-    }
-  };
-
-  /*
-   * SEND EMAIL VERIFICATION
-   *
-   * Firebase REST API:
-   * accounts:sendOobCode
-   *
-   * requestType:
-   * VERIFY_EMAIL
-   */
-  const handleVerifyEmail = async () => {
-    clearMessages();
-
-    if (!auth.currentUser) {
-      alert('Please login again.');
-      setScreen('login');
-      return;
-    }
-
-    setVerificationLoading(true);
-
-    try {
-      /*
-       * Get a fresh ID token.
-       */
-      const idToken =
-        await auth.currentUser.getIdToken(true);
-
       const apiKey = auth.app.options.apiKey;
 
-      /*
-       * Send verification email through
-       * Firebase REST API.
-       */
       const response = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+        `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
         {
           method: 'POST',
-
           headers: {
             'Content-Type': 'application/json',
           },
-
           body: JSON.stringify({
-            requestType: 'VERIFY_EMAIL',
             idToken,
           }),
         }
@@ -328,224 +44,166 @@ function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        const firebaseError =
-          data?.error?.message || '';
+        throw new Error(
+          data?.error?.message || 'Failed to fetch user details'
+        );
+      }
 
-        switch (firebaseError) {
-          case 'EMAIL_EXISTS':
-            setError(
-              'This email address is already associated with another account.'
-            );
-            break;
+      if (data.users && data.users.length > 0) {
+        const user = data.users[0];
 
-          case 'INVALID_ID_TOKEN':
-            setError(
-              'Your login session has expired. Please login again.'
-            );
-            break;
+        setEmail(user.email || '');
+        setFullName(user.displayName || '');
+        setPhotoUrl(user.photoUrl || '');
 
-          case 'USER_NOT_FOUND':
-            setError(
-              'User account was not found. Please login again.'
-            );
-            break;
+        setProfileComplete(
+          Boolean(user.displayName && user.photoUrl)
+        );
 
-          case 'TOKEN_EXPIRED':
-            setError(
-              'Your session has expired. Please login again.'
-            );
-            break;
+        setEmailVerified(Boolean(user.emailVerified));
 
-          case 'INVALID_EMAIL':
-            setError(
-              'The email address is invalid.'
-            );
-            break;
+        return user;
+      }
 
-          case 'OPERATION_NOT_ALLOWED':
-            setError(
-              'Email verification is not enabled for this Firebase project.'
-            );
-            break;
+      return null;
+    } catch (error) {
+      console.error('Get user details error:', error);
+      return null;
+    }
+  };
 
-          case 'TOO_MANY_ATTEMPTS_TRY_LATER':
-            setError(
-              'Too many attempts. Please try again later.'
-            );
-            break;
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const token = await getIdToken(user, true);
 
-          default:
-            setError(
-              'Unable to send verification email. Please try again.'
-            );
+          localStorage.setItem('idToken', token);
+          localStorage.setItem('token', token);
+
+          await getUserDetails(token);
+
+          setScreen('profile-status');
+        } catch (error) {
+          console.error(error);
         }
+      } else {
+        localStorage.removeItem('idToken');
+        localStorage.removeItem('token');
+        setScreen('login');
+      }
+    });
 
+    return () => unsubscribe();
+  }, []);
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setMessage('');
+
+    try {
+      if (isLogin) {
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        const token = await getIdToken(userCredential.user, true);
+
+        localStorage.setItem('idToken', token);
+        localStorage.setItem('token', token);
+
+        await getUserDetails(token);
+
+        setScreen('profile-status');
+      } else {
+        const userCredential =
+          await createUserWithEmailAndPassword(
+            auth,
+            email,
+            password
+          );
+
+        const token = await getIdToken(userCredential.user, true);
+
+        localStorage.setItem('idToken', token);
+        localStorage.setItem('token', token);
+
+        setProfileComplete(false);
+        setEmailVerified(false);
+        setScreen('profile-status');
+      }
+    } catch (error) {
+      console.error(error);
+
+      if (isLogin) {
+        alert('Invalid email or password.');
+      } else {
+        alert(error.message || 'Signup failed.');
+      }
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      alert('Please enter your email first.');
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert('Password reset email sent. Check your inbox.');
+    } catch (error) {
+      alert(error.message || 'Failed to send password reset email.');
+    }
+  };
+
+  const openProfile = async () => {
+    try {
+      const user = auth.currentUser;
+
+      if (!user) {
+        setScreen('login');
         return;
       }
 
-      /*
-       * Firebase successfully sent the email.
-       */
-      setSuccess(
-        'Check your email, you might have received a verification link. Click on it to verify.'
-      );
+      const token = await getIdToken(user, true);
 
-      alert(
-        'Verification email sent! Check your inbox and click the verification link.'
-      );
-    } catch (err) {
-      console.error(
-        'Email verification error:',
-        err
-      );
-
-      setError(
-        'Unable to send verification email. Please check your internet connection and try again.'
-      );
-    } finally {
-      setVerificationLoading(false);
-    }
-  };
-
-  /*
-   * CHECK VERIFICATION STATUS
-   *
-   * Useful after the user clicks the verification
-   * link in their email.
-   */
-  const checkEmailVerification = async () => {
-    clearMessages();
-
-    if (!auth.currentUser) {
-      alert('Please login again.');
-      setScreen('login');
-      return;
-    }
-
-    setVerificationLoading(true);
-
-    try {
-      /*
-       * Reload Firebase user information.
-       */
-      await auth.currentUser.reload();
-
-      const user = auth.currentUser;
-
-      /*
-       * Get a fresh token after reload.
-       */
-      const token =
-        await user.getIdToken(true);
-
-      localStorage.setItem('token', token);
-
-      /*
-       * Fetch latest Firebase account information.
-       */
-      const latestUser =
-        await getUserDetails(token);
-
-      const verified =
-        latestUser?.emailVerified ||
-        user.emailVerified;
-
-      setEmailVerified(Boolean(verified));
-
-      if (verified) {
-        setSuccess(
-          'Your email has been verified successfully.'
-        );
-      } else {
-        setError(
-          'Your email is not verified yet. Please click the verification link sent to your email.'
-        );
-      }
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        'Unable to check email verification status. Please try again.'
-      );
-    } finally {
-      setVerificationLoading(false);
-    }
-  };
-
-  /*
-   * OPEN PROFILE
-   */
-  const openProfile = async () => {
-    clearMessages();
-
-    if (!auth.currentUser) {
-      alert('Please login again.');
-      setScreen('login');
-      return;
-    }
-
-    setProfileLoading(true);
-
-    try {
-      const token =
-        await auth.currentUser.getIdToken(true);
-
+      localStorage.setItem('idToken', token);
       localStorage.setItem('token', token);
 
       await getUserDetails(token);
 
       setScreen('update-profile');
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        'Unable to load your profile details.'
-      );
-    } finally {
-      setProfileLoading(false);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to load profile details.');
     }
   };
 
-  /*
-   * UPDATE PROFILE
-   */
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    clearMessages();
-
-    if (!auth.currentUser) {
-      alert('Please login again.');
-      setScreen('login');
-      return;
-    }
-
-    if (
-      !fullName.trim() ||
-      !photoUrl.trim()
-    ) {
-      setError(
-        'Full Name and Profile Photo URL are required.'
-      );
-      return;
-    }
-
-    setLoading(true);
+    setMessage('');
 
     try {
-      const apiKey = auth.app.options.apiKey;
+      const user = auth.currentUser;
 
-      const token =
-        await auth.currentUser.getIdToken(true);
+      if (!user) {
+        setScreen('login');
+        return;
+      }
+
+      const token = await getIdToken(user, true);
+      const apiKey = auth.app.options.apiKey;
 
       const response = await fetch(
         `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
         {
           method: 'POST',
-
           headers: {
             'Content-Type': 'application/json',
           },
-
           body: JSON.stringify({
             idToken: token,
             displayName: fullName.trim(),
@@ -559,452 +217,375 @@ function App() {
 
       if (!response.ok) {
         throw new Error(
-          data?.error?.message ||
-          'PROFILE_UPDATE_FAILED'
+          data?.error?.message || 'Failed to update profile'
         );
       }
 
-      if (data.idToken) {
-        localStorage.setItem(
-          'token',
-          data.idToken
-        );
-      }
+      const latestToken = data.idToken || token;
 
-      const latestToken =
-        data.idToken ||
-        await auth.currentUser.getIdToken(true);
+      localStorage.setItem('idToken', latestToken);
+      localStorage.setItem('token', latestToken);
 
       await getUserDetails(latestToken);
 
-      setProfileComplete(true);
-
-      setSuccess(
-        'Profile updated successfully!'
-      );
-
+      setMessage('Profile updated successfully!');
       setScreen('profile-status');
-    } catch (err) {
-      console.error(
-        'Update profile error:',
-        err
-      );
-
-      setError(
-        'Unable to update profile. Please check the details and try again.'
-      );
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'Failed to update profile.');
     }
   };
 
-  /*
-   * LOGOUT
-   */
+  const handleVerifyEmail = async () => {
+    try {
+      const user = auth.currentUser;
+
+      if (!user) {
+        setScreen('login');
+        return;
+      }
+
+      const idToken = await user.getIdToken(true);
+      const apiKey = auth.app.options.apiKey;
+
+      const response = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requestType: 'VERIFY_EMAIL',
+            idToken,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorCode = data?.error?.message;
+
+        const errorMessages = {
+          EMAIL_EXISTS: 'This email is already in use.',
+          INVALID_ID_TOKEN:
+            'Your session has expired. Please login again.',
+          USER_NOT_FOUND: 'User not found.',
+          TOKEN_EXPIRED:
+            'Your session has expired. Please login again.',
+          INVALID_EMAIL: 'Invalid email address.',
+          OPERATION_NOT_ALLOWED:
+            'Email verification is not allowed for this account.',
+          TOO_MANY_ATTEMPTS_TRY_LATER:
+            'Too many attempts. Please try again later.',
+        };
+
+        throw new Error(
+          errorMessages[errorCode] ||
+            errorCode ||
+            'Failed to send verification email.'
+        );
+      }
+
+      setMessage(
+        'Verification email sent! Check your inbox and click the verification link.'
+      );
+
+      alert(
+        'Verification email sent! Check your inbox and click the verification link.'
+      );
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'Failed to send verification email.');
+    }
+  };
+
+  const checkEmailVerification = async () => {
+    try {
+      const user = auth.currentUser;
+
+      if (!user) {
+        setScreen('login');
+        return;
+      }
+
+      await user.reload();
+
+      const token = await user.getIdToken(true);
+
+      localStorage.setItem('idToken', token);
+      localStorage.setItem('token', token);
+
+      const userData = await getUserDetails(token);
+
+      if (userData?.emailVerified) {
+        setEmailVerified(true);
+        setMessage('Email verified successfully!');
+      } else {
+        setEmailVerified(false);
+        setMessage(
+          'Email is not verified yet. Please click the verification link from your email.'
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Failed to check email verification status.');
+    }
+  };
+
+  // LOGOUT USER
   const handleLogout = async () => {
-    await signOut(auth);
+    try {
+      // Sign out from Firebase
+      await signOut(auth);
 
-    localStorage.removeItem('token');
+      // Clear ID token from local storage
+      localStorage.removeItem('idToken');
+      localStorage.removeItem('token');
 
-    setScreen('login');
+      // Reset login screen
+      setEmail('');
+      setPassword('');
+      setFullName('');
+      setPhotoUrl('');
+      setProfileComplete(false);
+      setEmailVerified(false);
+      setMessage('');
+      setIsLogin(true);
 
-    setEmail('');
-    setPassword('');
-    setFullName('');
-    setPhotoUrl('');
-
-    setProfileComplete(false);
-    setEmailVerified(false);
-
-    clearMessages();
+      // Redirect to login page
+      setScreen('login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      alert('Failed to logout. Please try again.');
+    }
   };
 
-  /*
-   * PROFILE STATUS SCREEN
-   */
-  if (screen === 'profile-status') {
-    if (profileLoading) {
-      return (
-        <div className="profile-page">
-          <div className="status-content">
-            <h1>Loading profile...</h1>
-          </div>
-        </div>
-      );
-    }
-
+  // LOGIN SCREEN
+  if (screen === 'login') {
     return (
-      <div className="profile-page">
+      <div className="auth-container">
+        <div className="auth-card">
+          <h1>Expense Tracker</h1>
 
-        <header className="profile-header">
+          <h2>{isLogin ? 'Login' : 'Sign Up'}</h2>
 
-          <div className="quote">
-            Winners never quite, Quitters never win.
-          </div>
+          <form onSubmit={handleAuth}>
+            {!isLogin && (
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            )}
 
-          {!profileComplete && (
-            <div className="profile-alert">
-
-              <span>
-                Your Profile is{' '}
-                <strong>64%</strong> completed.
-                A complete Profile has higher
-                chances of landing a job.
-              </span>
-
-              <button
-                onClick={openProfile}
-                disabled={profileLoading}
-              >
-                {profileLoading
-                  ? 'Loading...'
-                  : 'Complete now'}
-              </button>
-
-            </div>
-          )}
-
-          {profileComplete && (
-            <div className="profile-alert complete">
-
-              Your Profile is{' '}
-              <strong>100%</strong> completed.
-
-            </div>
-          )}
-
-        </header>
-
-        <main className="status-content">
-
-          <h1>
-            Welcome to Expense Tracker
-          </h1>
-
-          {success && (
-            <p className="message success">
-              {success}
-            </p>
-          )}
-
-          {error && (
-            <p className="message error">
-              {error}
-            </p>
-          )}
-
-          {!emailVerified && (
-            <div className="verification-box">
-
-              <h3>
-                Verify your Email ID
-              </h3>
-
-              <p>
-                Please verify your email address
-                to keep your account secure.
-              </p>
-
-              <button
-                className="verify-button"
-                onClick={handleVerifyEmail}
-                disabled={verificationLoading}
-              >
-                {verificationLoading
-                  ? 'Sending...'
-                  : 'Verify Email ID'}
-              </button>
-
-              <button
-                className="check-button"
-                onClick={checkEmailVerification}
-                disabled={verificationLoading}
-              >
-                I have verified my email
-              </button>
-
-            </div>
-          )}
-
-          {emailVerified && (
-            <div className="verified-box">
-              ✓ Email verified successfully
-            </div>
-          )}
-
-          {profileComplete && photoUrl && (
-            <img
-              className="profile-preview"
-              src={photoUrl}
-              alt="Profile"
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
-          )}
 
-          {profileComplete && (
-            <p>
-              <strong>
-                {fullName}
-              </strong>
-            </p>
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            <button type="submit">
+              {isLogin ? 'Login' : 'Sign Up'}
+            </button>
+          </form>
+
+          {isLogin && (
+            <button
+              type="button"
+              className="secondary-btn"
+              onClick={handleForgotPassword}
+            >
+              Forgot Password?
+            </button>
           )}
 
           <button
-            className="logout-button"
+            type="button"
+            className="secondary-btn"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setMessage('');
+            }}
+          >
+            {isLogin
+              ? 'Create a new account'
+              : 'Already have an account? Login'}
+          </button>
+
+          {message && <p>{message}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // PROFILE STATUS SCREEN
+  if (screen === 'profile-status') {
+    return (
+      <div className="app-container">
+        <div className="top-bar">
+          <h1>Expense Tracker</h1>
+
+          <button
+            type="button"
+            className="logout-btn"
             onClick={handleLogout}
           >
             Logout
           </button>
+        </div>
 
-        </main>
+        <div className="content-card">
+          <h2>Welcome to Expense Tracker</h2>
 
-      </div>
-    );
-  }
+          {!profileComplete ? (
+            <div>
+              <p>Your profile is incomplete.</p>
 
-  /*
-   * EDIT PROFILE SCREEN
-   */
-  if (screen === 'update-profile') {
-    return (
-      <div className="profile-page">
+              <button
+                type="button"
+                onClick={openProfile}
+              >
+                Complete Now
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p>✓ Profile completed successfully.</p>
 
-        <header className="profile-header">
-
-          <div className="quote">
-            Winners never quite, Quitters never win.
-          </div>
-
-          <button
-            className="cancel-button"
-            onClick={() =>
-              setScreen('profile-status')
-            }
-          >
-            Cancel
-          </button>
-
-        </header>
-
-        <main className="update-content">
-
-          <h1>
-            Contact Details
-          </h1>
-
-          <form
-            className="profile-form"
-            onSubmit={handleUpdateProfile}
-          >
-
-            <label>
-
-              <span className="field-icon">
-                ◉
-              </span>
-
-              <strong>
-                Full Name:
-              </strong>
-
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) =>
-                  setFullName(e.target.value)
-                }
-              />
-
-            </label>
-
-            <label>
-
-              <span className="field-icon">
-                ◎
-              </span>
-
-              <strong>
-                Profile Photo URL
-              </strong>
-
-              <input
-                type="url"
-                value={photoUrl}
-                onChange={(e) =>
-                  setPhotoUrl(e.target.value)
-                }
-                placeholder="https://..."
-              />
-
-            </label>
-
-            {error && (
-              <p className="message error profile-error">
-                {error}
-              </p>
-            )}
-
-            <button
-              className="update-button"
-              type="submit"
-              disabled={loading}
-            >
-              {loading
-                ? 'Updating...'
-                : 'Update'}
-            </button>
-
-          </form>
-
-        </main>
-
-      </div>
-    );
-  }
-
-  /*
-   * LOGIN / SIGNUP
-   */
-  const isLogin = screen === 'login';
-
-  return (
-    <div className="page">
-
-      <div
-        className="blue-shape"
-        aria-hidden="true"
-      ></div>
-
-      <main className="content">
-
-        <section className="auth-wrap">
-
-          <div className="card">
-
-            <h1>
-              {isLogin
-                ? 'Login'
-                : 'SignUp'}
-            </h1>
-
-            <form
-              onSubmit={
-                isLogin
-                  ? handleLogin
-                  : handleSignup
-              }
-              noValidate
-            >
-
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                autoComplete="email"
-              />
-
-              <input
-                type="password"
-                placeholder="password"
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                autoComplete={
-                  isLogin
-                    ? 'current-password'
-                    : 'new-password'
-                }
-              />
-
-              {!isLogin && (
-                <input
-                  type="password"
-                  placeholder="Confirm Password"
-                  value={confirmPassword}
-                  onChange={(e) =>
-                    setConfirmPassword(
-                      e.target.value
-                    )
-                  }
-                  autoComplete="new-password"
+              {photoUrl && (
+                <img
+                  src={photoUrl}
+                  alt="Profile"
+                  className="profile-photo"
                 />
               )}
 
-              {error && (
-                <p className="message error">
-                  {error}
-                </p>
-              )}
+              <p>
+                <strong>Name:</strong> {fullName}
+              </p>
 
-              {success && (
-                <p className="message success">
-                  {success}
-                </p>
-              )}
+              <p>
+                <strong>Email:</strong> {email}
+              </p>
 
               <button
-                type="submit"
-                disabled={loading}
-              >
-                {loading
-                  ? isLogin
-                    ? 'Logging in...'
-                    : 'Signing up...'
-                  : isLogin
-                    ? 'Login'
-                    : 'Sign up'}
-              </button>
-
-            </form>
-
-            {isLogin && (
-              <button
-                className="forgot-button"
                 type="button"
-                onClick={
-                  handleForgotPassword
-                }
+                onClick={openProfile}
               >
-                Forgot password
+                Edit User Details
               </button>
-            )}
+            </div>
+          )}
 
+          <div className="verification-section">
+            {!emailVerified ? (
+              <>
+                <h3>Verify Email ID</h3>
+
+                <p>
+                  Your email address is not verified yet.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleVerifyEmail}
+                >
+                  Verify Email ID
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={checkEmailVerification}
+                >
+                  I have verified my email
+                </button>
+              </>
+            ) : (
+              <p>✓ Email verified successfully</p>
+            )}
           </div>
 
+          {message && <p>{message}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // UPDATE PROFILE SCREEN
+  if (screen === 'update-profile') {
+    return (
+      <div className="app-container">
+        <div className="top-bar">
+          <h1>Expense Tracker</h1>
+
           <button
-            className="switch-box"
             type="button"
-            onClick={() => {
-
-              clearMessages();
-
-              setScreen(
-                isLogin
-                  ? 'signup'
-                  : 'login'
-              );
-
-              setPassword('');
-              setConfirmPassword('');
-
-            }}
+            className="logout-btn"
+            onClick={handleLogout}
           >
-            {isLogin
-              ? "Don't have an account? Sign up"
-              : 'Have an account? Login'}
+            Logout
           </button>
+        </div>
 
-        </section>
+        <div className="content-card">
+          <h2>Edit User Details</h2>
 
-      </main>
+          <form onSubmit={handleUpdateProfile}>
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
 
-    </div>
-  );
+            <input
+              type="url"
+              placeholder="Profile Photo URL"
+              value={photoUrl}
+              onChange={(e) => setPhotoUrl(e.target.value)}
+              required
+            />
+
+            <button type="submit">
+              Update Profile
+            </button>
+          </form>
+
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => setScreen('profile-status')}
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
 
-createRoot(
-  document.getElementById('root')
-).render(<App />);
+export default App;
+
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
