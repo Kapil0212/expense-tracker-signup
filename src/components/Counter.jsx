@@ -23,6 +23,14 @@ function Counter() {
     dispatch({ type: 'DECREMENTBY2' });
   };
 
+  const handleIncrementBy5 = () => {
+    dispatch({ type: 'INCREMENTBY5' });
+  };
+
+  const handleDecrementBy5 = () => {
+    dispatch({ type: 'DECREMENTBY5' });
+  };
+
   return (
     <section className="counter-section">
       <h3>Redux Counter</h3>
@@ -58,6 +66,20 @@ function Counter() {
           onClick={handleDecrementBy2}
         >
           Decrement By 2
+        </button>
+
+        <button
+          type="button"
+          onClick={handleIncrementBy5}
+        >
+          IncrementBy5
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDecrementBy5}
+        >
+          DecrementBy5
         </button>
       </div>
     </section>

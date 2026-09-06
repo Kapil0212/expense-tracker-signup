@@ -33,6 +33,20 @@ const counterReducer = (state = initialState, action) => {
     };
   }
 
+  if (action.type === 'INCREMENTBY5') {
+    return {
+      ...state,
+      counter: state.counter + 5,
+    };
+  }
+
+  if (action.type === 'DECREMENTBY5') {
+    return {
+      ...state,
+      counter: state.counter - 5,
+    };
+  }
+
   return state;
 };
 
