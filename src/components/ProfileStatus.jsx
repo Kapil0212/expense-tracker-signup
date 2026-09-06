@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 
 import ExpenseForm from './ExpenseForm';
 import ExpenseList from './ExpenseList';
@@ -7,21 +6,11 @@ import ExpenseList from './ExpenseList';
 import { auth } from '../firebase';
 
 import {
-  addExpense as addExpenseApi,
-  getExpenses,
-  updateExpense as updateExpenseApi,
-  deleteExpense as deleteExpenseApi,
-} from '../services/expenseApi';
-
-import {
-  setExpenses,
   addExpense,
+  getExpenses,
   updateExpense,
   deleteExpense,
-  setLoading,
-  setError,
-  clearExpenses,
-} from '../redux/expensesSlice';
+} from '../services/expenseApi';
 
 function ProfileStatus({
   profileComplete,
@@ -34,68 +23,73 @@ function ProfileStatus({
   handleVerifyEmail,
   checkEmailVerification,
   handleLogout,
+  onThemeToggle,
+  isDark,
 }) {
-  const dispatch = useDispatch();
-
-  const expenses = useSelector(
-    (state) => state.expenses.expenses
-  );
-
-  const loadingExpenses = useSelector(
-    (state) => state.expenses.loading
-  );
-
-  const expenseError = useSelector(
-    (state) => state.expenses.error
-  );
+  const [expenses, setExpenses] = useState([]);
+  const [loadingExpenses, setLoadingExpenses] =
+    useState(true);
 
   const [addingExpense, setAddingExpense] =
+    useState(false);
+
+  const [expenseError, setExpenseError] =
+    useState('');
+
+  const [isPremium, setIsPremium] =
     useState(false);
 
   useEffect(() => {
     const loadExpenses = async () => {
       try {
-        dispatch(setLoading(true));
-        dispatch(setError(''));
-
         const user = auth.currentUser;
 
         if (!user) {
-          dispatch(clearExpenses());
           return;
         }
 
-        const idToken = await user.getIdToken(true);
+        const idToken =
+          await user.getIdToken(true);
 
-        const userExpenses = await getExpenses(
-          idToken,
-          user.uid
-        );
+        const userExpenses =
+          await getExpenses(
+            idToken,
+            user.uid
+          );
 
-        dispatch(setExpenses(userExpenses));
+        setExpenses(userExpenses);
       } catch (error) {
         console.error(
           'Error loading expenses:',
           error
         );
 
-        dispatch(
-          setError(
-            error.message ||
-              'Failed to load expenses.'
-          )
+        setExpenseError(
+          error.message ||
+            'Failed to load expenses.'
         );
       } finally {
-        dispatch(setLoading(false));
+        setLoadingExpenses(false);
       }
     };
 
     loadExpenses();
-  }, [dispatch]);
+  }, []);
 
-  const handleAddExpense = async (expense) => {
+  const totalExpenses = expenses.reduce(
+    (total, expense) =>
+      total + Number(expense.amount || 0),
+    0
+  );
+
+  const premiumEligible =
+    totalExpenses >= 10000;
+
+  const handleAddExpense = async (
+    expense
+  ) => {
     setAddingExpense(true);
-    dispatch(setError(''));
+    setExpenseError('');
 
     try {
       const user = auth.currentUser;
@@ -105,15 +99,22 @@ function ProfileStatus({
         return false;
       }
 
-      const idToken = await user.getIdToken(true);
+      const idToken =
+        await user.getIdToken(true);
 
-      const savedExpense = await addExpenseApi(
-        idToken,
-        user.uid,
-        expense
+      const savedExpense =
+        await addExpense(
+          idToken,
+          user.uid,
+          expense
+        );
+
+      setExpenses(
+        (currentExpenses) => [
+          ...currentExpenses,
+          savedExpense,
+        ]
       );
-
-      dispatch(addExpense(savedExpense));
 
       return true;
     } catch (error) {
@@ -122,11 +123,9 @@ function ProfileStatus({
         error
       );
 
-      dispatch(
-        setError(
-          error.message ||
-            'Failed to add expense.'
-        )
+      setExpenseError(
+        error.message ||
+          'Failed to add expense.'
       );
 
       alert(
@@ -152,16 +151,27 @@ function ProfileStatus({
         return false;
       }
 
-      const idToken = await user.getIdToken(true);
+      const idToken =
+        await user.getIdToken(true);
 
-      const updated = await updateExpenseApi(
-        idToken,
-        user.uid,
-        expenseId,
-        updatedExpense
+      const updated =
+        await updateExpense(
+          idToken,
+          user.uid,
+          expenseId,
+          updatedExpense
+        );
+
+      setExpenses(
+        (currentExpenses) =>
+          currentExpenses.map(
+            (expense) =>
+              expense.id ===
+              expenseId
+                ? updated
+                : expense
+          )
       );
-
-      dispatch(updateExpense(updated));
 
       return true;
     } catch (error) {
@@ -179,7 +189,9 @@ function ProfileStatus({
     }
   };
 
-  const handleDeleteExpense = async (expenseId) => {
+  const handleDeleteExpense = async (
+    expenseId
+  ) => {
     try {
       const user = auth.currentUser;
 
@@ -188,15 +200,22 @@ function ProfileStatus({
         return false;
       }
 
-      const idToken = await user.getIdToken(true);
+      const idToken =
+        await user.getIdToken(true);
 
-      await deleteExpenseApi(
+      await deleteExpense(
         idToken,
         user.uid,
         expenseId
       );
 
-      dispatch(deleteExpense(expenseId));
+      setExpenses(
+        (currentExpenses) =>
+          currentExpenses.filter(
+            (expense) =>
+              expense.id !== expenseId
+          )
+      );
 
       console.log(
         'Expense successfuly deleted'
@@ -218,13 +237,85 @@ function ProfileStatus({
     }
   };
 
-  const totalExpense = expenses.reduce(
-    (total, expense) =>
-      total + Number(expense.amount || 0),
-    0
-  );
+  const activatePremium = () => {
+    if (!premiumEligible) {
+      return;
+    }
 
-  const showPremium = totalExpense > 10000;
+    setIsPremium(true);
+
+    alert(
+      'Premium activated successfully!'
+    );
+  };
+
+  const escapeCsvValue = (value) => {
+    const stringValue =
+      String(value ?? '');
+
+    return `"${stringValue.replace(
+      /"/g,
+      '""'
+    )}"`;
+  };
+
+  const downloadExpensesCsv = () => {
+    if (expenses.length === 0) {
+      alert(
+        'There are no expenses to download.'
+      );
+
+      return;
+    }
+
+    const headers = [
+      'Amount',
+      'Description',
+      'Category',
+    ];
+
+    const rows = expenses.map(
+      (expense) => [
+        expense.amount,
+        expense.description,
+        expense.category,
+      ]
+    );
+
+    const csvContent = [
+      headers.map(escapeCsvValue).join(','),
+      ...rows.map((row) =>
+        row
+          .map(escapeCsvValue)
+          .join(',')
+      ),
+    ].join('\n');
+
+    const blob = new Blob(
+      [csvContent],
+      {
+        type: 'text/csv;charset=utf-8;',
+      }
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement('a');
+
+    link.href = url;
+    link.download =
+      'my-expenses.csv';
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="app-container">
@@ -241,11 +332,31 @@ function ProfileStatus({
       </div>
 
       <div className="content-card">
-        <h2>Welcome to Expense Tracker</h2>
+        <div className="expense-header-row">
+          <div>
+            <h2>
+              Welcome to Expense Tracker
+            </h2>
+          </div>
+
+          {isPremium && (
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={onThemeToggle}
+            >
+              {isDark
+                ? '☀️ Light Mode'
+                : '🌙 Dark Mode'}
+            </button>
+          )}
+        </div>
 
         {!profileComplete ? (
           <div>
-            <p>Your profile is incomplete.</p>
+            <p>
+              Your profile is incomplete.
+            </p>
 
             <button
               type="button"
@@ -257,7 +368,8 @@ function ProfileStatus({
         ) : (
           <div>
             <p>
-              ✓ Profile completed successfully.
+              ✓ Profile completed
+              successfully.
             </p>
 
             {photoUrl && (
@@ -269,11 +381,13 @@ function ProfileStatus({
             )}
 
             <p>
-              <strong>Name:</strong> {fullName}
+              <strong>Name:</strong>{' '}
+              {fullName}
             </p>
 
             <p>
-              <strong>Email:</strong> {email}
+              <strong>Email:</strong>{' '}
+              {email}
             </p>
 
             <button
@@ -288,15 +402,20 @@ function ProfileStatus({
         <div className="verification-section">
           {!emailVerified ? (
             <>
-              <h3>Verify Email ID</h3>
+              <h3>
+                Verify Email ID
+              </h3>
 
               <p>
-                Your email address is not verified yet.
+                Your email address is not
+                verified yet.
               </p>
 
               <button
                 type="button"
-                onClick={handleVerifyEmail}
+                onClick={
+                  handleVerifyEmail
+                }
               >
                 Verify Email ID
               </button>
@@ -304,14 +423,17 @@ function ProfileStatus({
               <button
                 type="button"
                 className="secondary-btn"
-                onClick={checkEmailVerification}
+                onClick={
+                  checkEmailVerification
+                }
               >
                 I have verified my email
               </button>
             </>
           ) : (
             <p>
-              ✓ Email verified successfully
+              ✓ Email verified
+              successfully
             </p>
           )}
         </div>
@@ -319,7 +441,9 @@ function ProfileStatus({
         {message && <p>{message}</p>}
 
         <ExpenseForm
-          onAddExpense={handleAddExpense}
+          onAddExpense={
+            handleAddExpense
+          }
           loading={addingExpense}
         />
 
@@ -329,27 +453,79 @@ function ProfileStatus({
           </p>
         )}
 
-        <div className="expense-summary">
+        <div className="expense-total-card">
           <h3>
-            Total Expenses: ₹
-            {totalExpense.toFixed(2)}
+            Total Expenses
           </h3>
 
-          {showPremium && (
-            <button
-              type="button"
-              className="premium-btn"
-            >
-              Activate Premium
-            </button>
-          )}
+          <p>
+            ₹{totalExpenses.toFixed(2)}
+          </p>
         </div>
+
+        {premiumEligible &&
+          !isPremium && (
+            <div className="premium-card">
+              <h3>
+                🎉 Premium Available
+              </h3>
+
+              <p>
+                You have reached ₹10,000
+                in total expenses.
+              </p>
+
+              <button
+                type="button"
+                className="premium-btn"
+                onClick={
+                  activatePremium
+                }
+              >
+                Activate Premium
+              </button>
+            </div>
+          )}
+
+        {isPremium && (
+          <div className="premium-tools">
+            <div className="premium-active">
+              ✓ Premium Activated
+            </div>
+
+            <div className="premium-actions">
+              <button
+                type="button"
+                className="theme-toggle-btn"
+                onClick={onThemeToggle}
+              >
+                {isDark
+                  ? '☀️ Switch to Light Theme'
+                  : '🌙 Switch to Dark Theme'}
+              </button>
+
+              <button
+                type="button"
+                className="download-csv-btn"
+                onClick={
+                  downloadExpensesCsv
+                }
+              >
+                📥 Download Expenses CSV
+              </button>
+            </div>
+          </div>
+        )}
 
         <ExpenseList
           expenses={expenses}
           loading={loadingExpenses}
-          onUpdateExpense={handleUpdateExpense}
-          onDeleteExpense={handleDeleteExpense}
+          onUpdateExpense={
+            handleUpdateExpense
+          }
+          onDeleteExpense={
+            handleDeleteExpense
+          }
         />
       </div>
     </div>
