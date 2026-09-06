@@ -782,3 +782,182 @@ select {
     width: 100%;
   }
 }
+/* REDUX AUTH TASK */
+
+.redux-app {
+  min-height: 100vh;
+  background: #202020;
+  color: #222;
+}
+
+.redux-header {
+  height: 75px;
+  background: #4b008f;
+  color: white;
+  display: flex;
+  align-items: center;
+  padding: 0 9%;
+  box-sizing: border-box;
+}
+
+.redux-header h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.logged-in-header {
+  justify-content: space-between;
+}
+
+.logged-in-header nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.logged-in-header nav button {
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.logged-in-header .logout-button {
+  background: #ffc400;
+  color: #222;
+  padding: 9px 24px;
+  border-radius: 5px;
+}
+
+.redux-main {
+  width: 470px;
+  max-width: calc(100% - 30px);
+  margin: 58px auto;
+}
+
+.redux-login-card {
+  background: #f7f3fc;
+  border-radius: 6px;
+  padding: 30px;
+  width: 290px;
+  margin: 0 auto 58px;
+  box-sizing: border-box;
+}
+
+.redux-login-card form {
+  display: flex;
+  flex-direction: column;
+}
+
+.redux-login-card label {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.redux-login-card input {
+  height: 32px;
+  border: 1px solid #d6d6d6;
+  border-radius: 3px;
+  margin-bottom: 12px;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.redux-login-card button {
+  width: 70px;
+  height: 30px;
+  margin: 4px auto 0;
+  border: none;
+  border-radius: 5px;
+  background: #4b008f;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.user-profile-card {
+  height: 105px;
+  background: #f7f3fc;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 58px;
+}
+
+.user-profile-card h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.redux-counter-card {
+  background: #f7f3fc;
+  border-radius: 6px;
+  padding: 25px 35px 30px;
+  text-align: center;
+}
+
+.redux-counter-card h3 {
+  margin: 0 0 25px;
+  font-size: 15px;
+}
+
+.counter-number {
+  color: #4b008f;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 25px;
+}
+
+.counter-row {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  margin-top: 12px;
+}
+
+.counter-row button {
+  border: none;
+  border-radius: 4px;
+  background: #4b008f;
+  color: white;
+  padding: 8px 18px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.counter-row button:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 600px) {
+  .redux-header {
+    padding: 0 20px;
+  }
+
+  .redux-header h1 {
+    font-size: 22px;
+  }
+
+  .logged-in-header nav {
+    gap: 8px;
+  }
+
+  .logged-in-header nav button {
+    font-size: 12px;
+  }
+
+  .redux-main {
+    margin-top: 35px;
+  }
+
+  .counter-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

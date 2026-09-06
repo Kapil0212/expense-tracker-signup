@@ -1,85 +1,65 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
+import {
+  increment,
+  incrementBy2,
+  decrement,
+  incrementBy5,
+  decrementBy5,
+} from '../redux/counterSlice';
+
 function Counter() {
-  const counter = useSelector((state) => state.counter);
+  const counter = useSelector(
+    (state) => state.counter.counter
+  );
+
   const dispatch = useDispatch();
 
-  const handleIncrementFiveTimes = () => {
-    for (let i = 0; i < 5; i += 1) {
-      dispatch({ type: 'increment' });
-    }
-  };
-
-  const handleDecrement = () => {
-    dispatch({ type: 'decrement' });
-  };
-
-  const handleIncrementBy2 = () => {
-    dispatch({ type: 'INCREMENTBY2' });
-  };
-
-  const handleDecrementBy2 = () => {
-    dispatch({ type: 'DECREMENTBY2' });
-  };
-
-  const handleIncrementBy5 = () => {
-    dispatch({ type: 'INCREMENTBY5' });
-  };
-
-  const handleDecrementBy5 = () => {
-    dispatch({ type: 'DECREMENTBY5' });
-  };
-
   return (
-    <section className="counter-section">
-      <h3>Redux Counter</h3>
+    <section className="redux-counter-card">
+      <h3>REDUX COUNTER</h3>
 
-      <p className="counter-value">
-        Counter: {counter}
-      </p>
+      <div className="counter-number">
+        {counter}
+      </div>
 
-      <div className="counter-actions">
+      <div className="counter-row">
         <button
           type="button"
-          onClick={handleIncrementFiveTimes}
+          onClick={() => dispatch(increment())}
         >
-          Increment 5 Times
+          Increment
         </button>
 
         <button
           type="button"
-          onClick={handleDecrement}
+          onClick={() => dispatch(incrementBy5())}
+        >
+          Increase by 5
+        </button>
+
+        <button
+          type="button"
+          onClick={() => dispatch(decrement())}
         >
           Decrement
         </button>
+      </div>
 
+      <div className="counter-row">
         <button
           type="button"
-          onClick={handleIncrementBy2}
+          onClick={() => dispatch(incrementBy2())}
         >
-          Increment By 2
+          Increase by 2
         </button>
 
         <button
           type="button"
-          onClick={handleDecrementBy2}
+          onClick={() => dispatch(decrementBy5())}
         >
-          Decrement By 2
-        </button>
-
-        <button
-          type="button"
-          onClick={handleIncrementBy5}
-        >
-          IncrementBy5
-        </button>
-
-        <button
-          type="button"
-          onClick={handleDecrementBy5}
-        >
-          DecrementBy5
+          Decrement by 5
         </button>
       </div>
     </section>
