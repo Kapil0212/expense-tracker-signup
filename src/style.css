@@ -961,3 +961,31 @@ select {
     gap: 8px;
   }
 }
+
+.expense-summary {
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.expense-summary h3 {
+  margin: 0 0 12px;
+  color: #1e293b;
+}
+
+.premium-btn {
+  border: none;
+  border-radius: 7px;
+  padding: 10px 18px;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.premium-btn:hover {
+  background: #d97706;
+}

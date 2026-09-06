@@ -12,13 +12,20 @@ const getDatabaseUrl = () => {
   return databaseUrl.replace(/\/$/, '');
 };
 
+const getAuthHeaders = (idToken) => ({
+  Authorization: `Bearer ${idToken}`,
+});
+
 export const getExpenses = async (idToken, userId) => {
   const databaseUrl = getDatabaseUrl();
 
   const response = await fetch(
-    `${databaseUrl}/expenses/${userId}.json?auth=${idToken}`,
+    `${databaseUrl}/expenses/${userId}.json?auth=${encodeURIComponent(
+      idToken
+    )}`,
     {
       method: 'GET',
+      headers: getAuthHeaders(idToken),
     }
   );
 
@@ -50,10 +57,13 @@ export const addExpense = async (
   const databaseUrl = getDatabaseUrl();
 
   const response = await fetch(
-    `${databaseUrl}/expenses/${userId}.json?auth=${idToken}`,
+    `${databaseUrl}/expenses/${userId}.json?auth=${encodeURIComponent(
+      idToken
+    )}`,
     {
       method: 'POST',
       headers: {
+        ...getAuthHeaders(idToken),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -80,8 +90,6 @@ export const addExpense = async (
   };
 };
 
-/* UPDATE EXPENSE */
-
 export const updateExpense = async (
   idToken,
   userId,
@@ -91,10 +99,13 @@ export const updateExpense = async (
   const databaseUrl = getDatabaseUrl();
 
   const response = await fetch(
-    `${databaseUrl}/expenses/${userId}/${expenseId}.json?auth=${idToken}`,
+    `${databaseUrl}/expenses/${userId}/${expenseId}.json?auth=${encodeURIComponent(
+      idToken
+    )}`,
     {
       method: 'PUT',
       headers: {
+        ...getAuthHeaders(idToken),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -121,8 +132,6 @@ export const updateExpense = async (
   };
 };
 
-/* DELETE EXPENSE */
-
 export const deleteExpense = async (
   idToken,
   userId,
@@ -131,9 +140,12 @@ export const deleteExpense = async (
   const databaseUrl = getDatabaseUrl();
 
   const response = await fetch(
-    `${databaseUrl}/expenses/${userId}/${expenseId}.json?auth=${idToken}`,
+    `${databaseUrl}/expenses/${userId}/${expenseId}.json?auth=${encodeURIComponent(
+      idToken
+    )}`,
     {
       method: 'DELETE',
+      headers: getAuthHeaders(idToken),
     }
   );
 

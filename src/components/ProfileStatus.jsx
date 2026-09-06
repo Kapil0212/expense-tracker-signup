@@ -1,16 +1,27 @@
 import React, { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+
 import ExpenseForm from './ExpenseForm';
-import Counter from './Counter';
 import ExpenseList from './ExpenseList';
 
 import { auth } from '../firebase';
 
 import {
-  addExpense,
+  addExpense as addExpenseApi,
   getExpenses,
+  updateExpense as updateExpenseApi,
+  deleteExpense as deleteExpenseApi,
+} from '../services/expenseApi';
+
+import {
+  setExpenses,
+  addExpense,
   updateExpense,
   deleteExpense,
-} from '../services/expenseApi';
+  setLoading,
+  setError,
+  clearExpenses,
+} from '../redux/expensesSlice';
 
 function ProfileStatus({
   profileComplete,
@@ -24,59 +35,67 @@ function ProfileStatus({
   checkEmailVerification,
   handleLogout,
 }) {
-  const [expenses, setExpenses] = useState([]);
+  const dispatch = useDispatch();
 
-  const [loadingExpenses, setLoadingExpenses] =
-    useState(true);
+  const expenses = useSelector(
+    (state) => state.expenses.expenses
+  );
+
+  const loadingExpenses = useSelector(
+    (state) => state.expenses.loading
+  );
+
+  const expenseError = useSelector(
+    (state) => state.expenses.error
+  );
 
   const [addingExpense, setAddingExpense] =
     useState(false);
 
-  const [expenseError, setExpenseError] =
-    useState('');
-
   useEffect(() => {
     const loadExpenses = async () => {
       try {
+        dispatch(setLoading(true));
+        dispatch(setError(''));
+
         const user = auth.currentUser;
 
         if (!user) {
+          dispatch(clearExpenses());
           return;
         }
 
-        const idToken = await user.getIdToken(
-          true
-        );
+        const idToken = await user.getIdToken(true);
 
         const userExpenses = await getExpenses(
           idToken,
           user.uid
         );
 
-        setExpenses(userExpenses);
+        dispatch(setExpenses(userExpenses));
       } catch (error) {
         console.error(
           'Error loading expenses:',
           error
         );
 
-        setExpenseError(
-          error.message ||
-            'Failed to load expenses.'
+        dispatch(
+          setError(
+            error.message ||
+              'Failed to load expenses.'
+          )
         );
       } finally {
-        setLoadingExpenses(false);
+        dispatch(setLoading(false));
       }
     };
 
     loadExpenses();
-  }, []);
-
-  /* ADD */
+  }, [dispatch]);
 
   const handleAddExpense = async (expense) => {
     setAddingExpense(true);
-    setExpenseError('');
+    dispatch(setError(''));
 
     try {
       const user = auth.currentUser;
@@ -86,21 +105,15 @@ function ProfileStatus({
         return false;
       }
 
-      const idToken = await user.getIdToken(
-        true
+      const idToken = await user.getIdToken(true);
+
+      const savedExpense = await addExpenseApi(
+        idToken,
+        user.uid,
+        expense
       );
 
-      const savedExpense =
-        await addExpense(
-          idToken,
-          user.uid,
-          expense
-        );
-
-      setExpenses((currentExpenses) => [
-        ...currentExpenses,
-        savedExpense,
-      ]);
+      dispatch(addExpense(savedExpense));
 
       return true;
     } catch (error) {
@@ -109,9 +122,11 @@ function ProfileStatus({
         error
       );
 
-      setExpenseError(
-        error.message ||
-          'Failed to add expense.'
+      dispatch(
+        setError(
+          error.message ||
+            'Failed to add expense.'
+        )
       );
 
       alert(
@@ -125,8 +140,6 @@ function ProfileStatus({
     }
   };
 
-  /* UPDATE */
-
   const handleUpdateExpense = async (
     expenseId,
     updatedExpense
@@ -139,25 +152,16 @@ function ProfileStatus({
         return false;
       }
 
-      const idToken = await user.getIdToken(
-        true
+      const idToken = await user.getIdToken(true);
+
+      const updated = await updateExpenseApi(
+        idToken,
+        user.uid,
+        expenseId,
+        updatedExpense
       );
 
-      const updated =
-        await updateExpense(
-          idToken,
-          user.uid,
-          expenseId,
-          updatedExpense
-        );
-
-      setExpenses((currentExpenses) =>
-        currentExpenses.map((expense) =>
-          expense.id === expenseId
-            ? updated
-            : expense
-        )
-      );
+      dispatch(updateExpense(updated));
 
       return true;
     } catch (error) {
@@ -175,11 +179,7 @@ function ProfileStatus({
     }
   };
 
-  /* DELETE */
-
-  const handleDeleteExpense = async (
-    expenseId
-  ) => {
+  const handleDeleteExpense = async (expenseId) => {
     try {
       const user = auth.currentUser;
 
@@ -188,22 +188,15 @@ function ProfileStatus({
         return false;
       }
 
-      const idToken = await user.getIdToken(
-        true
-      );
+      const idToken = await user.getIdToken(true);
 
-      await deleteExpense(
+      await deleteExpenseApi(
         idToken,
         user.uid,
         expenseId
       );
 
-      setExpenses((currentExpenses) =>
-        currentExpenses.filter(
-          (expense) =>
-            expense.id !== expenseId
-        )
-      );
+      dispatch(deleteExpense(expenseId));
 
       console.log(
         'Expense successfuly deleted'
@@ -225,6 +218,14 @@ function ProfileStatus({
     }
   };
 
+  const totalExpense = expenses.reduce(
+    (total, expense) =>
+      total + Number(expense.amount || 0),
+    0
+  );
+
+  const showPremium = totalExpense > 10000;
+
   return (
     <div className="app-container">
       <div className="top-bar">
@@ -244,9 +245,7 @@ function ProfileStatus({
 
         {!profileComplete ? (
           <div>
-            <p>
-              Your profile is incomplete.
-            </p>
+            <p>Your profile is incomplete.</p>
 
             <button
               type="button"
@@ -270,13 +269,11 @@ function ProfileStatus({
             )}
 
             <p>
-              <strong>Name:</strong>{' '}
-              {fullName}
+              <strong>Name:</strong> {fullName}
             </p>
 
             <p>
-              <strong>Email:</strong>{' '}
-              {email}
+              <strong>Email:</strong> {email}
             </p>
 
             <button
@@ -294,8 +291,7 @@ function ProfileStatus({
               <h3>Verify Email ID</h3>
 
               <p>
-                Your email address is not
-                verified yet.
+                Your email address is not verified yet.
               </p>
 
               <button
@@ -308,9 +304,7 @@ function ProfileStatus({
               <button
                 type="button"
                 className="secondary-btn"
-                onClick={
-                  checkEmailVerification
-                }
+                onClick={checkEmailVerification}
               >
                 I have verified my email
               </button>
@@ -323,7 +317,6 @@ function ProfileStatus({
         </div>
 
         {message && <p>{message}</p>}
-        <Counter />
 
         <ExpenseForm
           onAddExpense={handleAddExpense}
@@ -336,15 +329,27 @@ function ProfileStatus({
           </p>
         )}
 
+        <div className="expense-summary">
+          <h3>
+            Total Expenses: ₹
+            {totalExpense.toFixed(2)}
+          </h3>
+
+          {showPremium && (
+            <button
+              type="button"
+              className="premium-btn"
+            >
+              Activate Premium
+            </button>
+          )}
+        </div>
+
         <ExpenseList
           expenses={expenses}
           loading={loadingExpenses}
-          onUpdateExpense={
-            handleUpdateExpense
-          }
-          onDeleteExpense={
-            handleDeleteExpense
-          }
+          onUpdateExpense={handleUpdateExpense}
+          onDeleteExpense={handleDeleteExpense}
         />
       </div>
     </div>

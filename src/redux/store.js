@@ -1,12 +1,14 @@
 import { configureStore } from '@reduxjs/toolkit';
 
-import counterReducer from './counterSlice';
 import authReducer from './authSlice';
+import counterReducer from './counterSlice';
+import expensesReducer from './expensesSlice';
 
 const store = configureStore({
   reducer: {
-    counter: counterReducer,
     auth: authReducer,
+    counter: counterReducer,
+    expenses: expensesReducer,
   },
 });
 
