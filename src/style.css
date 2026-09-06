@@ -717,3 +717,68 @@ select {
     width: 100%;
   }
 }
+
+/* REDUX COUNTER */
+
+.counter-section {
+  margin-top: 25px;
+  padding: 20px;
+  border: 1px solid #e1e5eb;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.counter-section h3 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: #1e293b;
+}
+
+.counter-value {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.counter-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.counter-actions button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 7px;
+  background: #0b9ee9;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.counter-actions button:hover {
+  background: #0789ca;
+}
+
+.counter-actions button:last-child {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #d9dee7;
+}
+
+.counter-actions button:last-child:hover {
+  background: #e2e8f0;
+}
+
+@media (max-width: 450px) {
+  .counter-actions {
+    flex-direction: column;
+  }
+
+  .counter-actions button {
+    width: 100%;
+  }
+}

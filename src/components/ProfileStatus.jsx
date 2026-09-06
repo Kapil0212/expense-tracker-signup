@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ExpenseForm from './ExpenseForm';
+import Counter from './Counter';
 import ExpenseList from './ExpenseList';
 
 import { auth } from '../firebase';
@@ -322,6 +323,7 @@ function ProfileStatus({
         </div>
 
         {message && <p>{message}</p>}
+        <Counter />
 
         <ExpenseForm
           onAddExpense={handleAddExpense}
